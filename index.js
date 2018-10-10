@@ -61,9 +61,9 @@ function translationHandler(inputFile, line, xlTranslateFile, key, language) {
             }
             var result = data.replace(line, newLine);
 
-            // fs.writeFile(someFile, result, 'utf8', function (err) {
-            //    if (err) return console.log(err);
-            // });
+            fs.writeFile(inputFile, result, 'utf8', function (err) {
+               if (err) return console.log(err);
+            });
             });
           }
         });
