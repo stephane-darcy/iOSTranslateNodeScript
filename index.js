@@ -152,9 +152,9 @@ program
   .usage('[options] <file ...>')
   .option('-x, --xl <xl file>', 'An XL file containt translations text')
   .option('-k, --key <key ID>', 'A row title in XL file using to get translation keys')
-  .option('-l, --language <language international uni code>', 'A range')
+  .option('-l, --language <Ex: FR>', 'language international unicode')
   .option('-f, --files <files>', 'A list of files to translate', list)
-  .option('-b, --baseLanguage <files>', 'A list of files to translate', list)
+  .option('-b, --baseLanguage <Ex: EN>', 'Reference language international unicode', list)
   .parse(process.argv);
 
   console.log(' xl file: %j', program.xl);
