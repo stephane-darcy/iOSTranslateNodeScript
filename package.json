@@ -12,6 +12,7 @@
     "url": ""
   },
   "dependencies": {
+    "commander": "^2.19.0",
     "comment-regex": "^1.0.1",
     "replace": "^1.0.0",
     "xlsx": "^0.14.0"
