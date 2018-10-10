@@ -5,12 +5,40 @@ const replace = require('replace');
 const fs = require('fs');
 var stream = require('stream');
 var program = require('commander');
+var sleep = require('sleep');
+const replaceInFile = require('replace-in-file');
 
+var linesAppands = [];
 
 // var inputFile = '/Users/sdarcy/git/Medialice-Roomco-iOS/Roomco/ressources/fr.lproj/Localizable.strings';
 // var xlTranslateFile = 'Roomco-traductions.xlsx';
 
-function setValueFromXslx(inputFile, xlTranslateFile, key, language, calback) {
+function msleep(n) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
+}
+function sleep(n) {
+  msleep(n*1000);
+}
+
+async function replaceLineInFile(file, newLine, oldLine) {
+
+  const options = {
+    files: file,
+    from: oldLine,
+    to: newLine,
+  };
+
+  try {
+    console.log(`newline===${newLine}===`);
+    const changes = replaceInFile.sync(options);
+    console.log('Modified files:', changes.join(', '));
+  }
+  catch (error) {
+    console.error('Error occurred:', error);
+  }
+}
+
+function setValueFromXslx(inputFile, xlTranslateFile, key, language, b, calback) {
 
   var ressources = {};
 
@@ -19,19 +47,47 @@ function setValueFromXslx(inputFile, xlTranslateFile, key, language, calback) {
   var rl = createInterface(instream, outstream);
 
   rl.on('line', (line) => {
-    calback(inputFile, line, xlTranslateFile, key, language);
+    calback(inputFile, line, xlTranslateFile, key, b, language);
   });
 
   rl.on('close', (line) => {
     console.log(`line = ${line}`);
     console.log('done reading file.');
   });
+}
 
+function storyboardTranslateHandler(inputFile, line, xlTranslateFile, key, baseLanguage, language) {
+  const commentRegex = require('comment-regex');
+  var workbook = XLSX.readFile(xlTranslateFile);
+  var sheet_name_list = workbook.SheetNames;
+  var xlData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
 
+  if (!commentRegex().test(line)) {
+    var tmpLine = line
+    line = line.trim();
+    if (line.length > 0) {
+      var array = line.trim().replace(';', '').split('=');
+      if (array.length === 2) {
+        var lineID = array[0].replace("\"", '');
+        var value = array[1].replace("\"", '');
+        lineID = lineID.replace("\"", '');
+        value = value.replace("\"", '');
+        xlData.forEach((item, index, array) => {
+          if (value.trim() === item[baseLanguage].trim()) {
+            // console.log(`line===${line}===`);
+            var newLine = `\"${lineID.trim()}\" = \"${item[language].trim()}\";`;
+            newLine = newLine.replace('%1$d', '%d');
+            newLine = newLine.replace('%1$s', '%@');
+            replaceLineInFile(inputFile, newLine, tmpLine);
+          }
+        })
+      }
+    }
+  }
 }
 
 
-function translationHandler(inputFile, line, xlTranslateFile, key, language) {
+function translationHandler(inputFile, line, xlTranslateFile, key, b, language) {
   const commentRegex = require('comment-regex');
   // var workbook = XLSX.readFile('Roomco-traductions.xlsx');
   var workbook = XLSX.readFile(xlTranslateFile);
@@ -56,59 +112,36 @@ function translationHandler(inputFile, line, xlTranslateFile, key, language) {
             newLine = newLine.replace('%1$s', '%@')
             console.log(`newline===${newLine}===`);
             fs.readFile(inputFile, 'utf8', function (err,data) {
-            if (err) {
-              return console.log(err);
-            }
-            var result = data.replace(line, newLine);
+              if (err) {
+                return console.log(err);
+              }
+              var result = data.replace(line, newLine);
 
-            fs.writeFile(inputFile, result, 'utf8', function (err) {
-               if (err) return console.log(err);
+              fs.writeFile(inputFile, result, 'utf8', function (err) {
+                 if (err) return console.log(err);
+              });
             });
-            });
+          } else {
+            let content = fs.readFileSync(inputFile, 'utf8');
+            if (!content.toString().includes(item[key].trim())) {
+              var newLine = `\"${item[key].trim()}\" = \"${item[language].trim()}\";`
+              newLine = newLine.replace('%1$d', '%d');
+              newLine = newLine.replace('%1$s', '%@')
+              if (linesAppands.indexOf(newLine) === -1) {
+                console.log(`notFoundLine===${newLine}===`);
+                linesAppands.push(newLine);
+                fs.appendFile(inputFile, newLine+"\n", function (err) {
+                  if (err) throw err;
+                  console.log('Saved!');
+                });
+              }
+            }
           }
         });
       }
     }
   }
 }
-
-
-function processFile(inputFile) {
-  var instream = createReadStream(inputFile);
-  var outstream = new stream();
-  var rl = createInterface(instream, outstream);
-
-  const commentRegex = require('comment-regex');
-
-  rl.on('line', (line) => {
-    if (!commentRegex().test(line)) {
-      var array = line.trim().replace(';', '').split('=');
-      if (array.length === 2) {
-        let text = array[1].trim();
-        if (text.replace("\"", '').length > 1) {
-          console.log(text);
-        }
-      }
-    }
-  });
-
-  rl.on('close', (line) => {
-    if (!commentRegex().test(line) && typeof(line) === "string") {
-      var array = line.trim().replace(';', '').split('=');
-      if (array.length === 2) {
-        let text = array[1].trim();
-        if (text.length > 1) {
-          console.log(text);
-        }
-      }
-    }
-    // console.log(line);
-    // console.log(commentRegex().test(line));
-    console.log('done reading file.');
-  });
-}
-
-// setValueFromXslx(inputFile, translationHandler);
 
 function run() {
 
@@ -121,12 +154,14 @@ program
   .option('-k, --key <key ID>', 'A row title in XL file using to get translation keys')
   .option('-l, --language <language international uni code>', 'A range')
   .option('-f, --files <files>', 'A list of files to translate', list)
+  .option('-b, --baseLanguage <files>', 'A list of files to translate', list)
   .parse(process.argv);
 
   console.log(' xl file: %j', program.xl);
   console.log(' key ID: %j', program.key);
   console.log(' language: %j', program.language);
   console.log(' files: %j', program.files);
+  console.log(' baseLanguage: %j', program.baseLanguage);
   console.log(' args: %j', program.args);
 
   if (!program.hasOwnProperty("xl") || !program.hasOwnProperty("key")
@@ -135,7 +170,12 @@ program
   }
 
   program.files.forEach((file, index, array) => {
-    setValueFromXslx(file, program.xl, program.key, program.language, translationHandler);
+    if (program.hasOwnProperty("baseLanguage")) {
+      setValueFromXslx(file, program.xl, program.key, program.language, program.baseLanguage, storyboardTranslateHandler);
+    } else {
+      setValueFromXslx(file, program.xl, program.key, program.language, "", translationHandler);
+    }
+
   });
 }
 
