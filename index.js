@@ -114,16 +114,6 @@ function translationHandler(inputFile, line, xlTranslateFile, key, language) {
             newLine = newLine.replace('%1$s', '%@')
             console.log(`newline===${newLine}===`);
             replaceLineInFile(inputFile, newLine, line);
-            // fs.readFile(inputFile, 'utf8', function (err,data) {
-            //   if (err) {
-            //     return console.log(err);
-            //   }
-            //   var result = data.replace(line, newLine);
-            //
-            //   fs.writeFile(inputFile, result, 'utf8', function (err) {
-            //      if (err) return console.log(err);
-            //   });
-            // });
           } else {
             let content = fs.readFileSync(inputFile, 'utf8');
             if (!content.toString().includes(item[key].trim())) {
