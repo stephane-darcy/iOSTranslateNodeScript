@@ -38,7 +38,7 @@ async function replaceLineInFile(file, newLine, oldLine) {
   }
 }
 
-function setValueFromXslx(inputFile, xlTranslateFile, key, language, b, calback) {
+function setValueFromXslx(inputFile, xlTranslateFile, key, language, calback) {
 
   var ressources = {};
 
@@ -47,7 +47,7 @@ function setValueFromXslx(inputFile, xlTranslateFile, key, language, b, calback)
   var rl = createInterface(instream, outstream);
 
   rl.on('line', (line) => {
-    calback(inputFile, line, xlTranslateFile, key, b, language);
+    calback(inputFile, line, xlTranslateFile, key, language);
   });
 
   rl.on('close', (line) => {
@@ -87,7 +87,7 @@ function storyboardTranslateHandler(inputFile, line, xlTranslateFile, key, baseL
 }
 
 
-function translationHandler(inputFile, line, xlTranslateFile, key, b, language) {
+function translationHandler(inputFile, line, xlTranslateFile, key, language) {
   const commentRegex = require('comment-regex');
   // var workbook = XLSX.readFile('Roomco-traductions.xlsx');
   var workbook = XLSX.readFile(xlTranslateFile);
@@ -107,33 +107,41 @@ function translationHandler(inputFile, line, xlTranslateFile, key, b, language) 
           if (lineID.trim() === item[key].trim()) {
             console.log(`line===${line}===`);
             console.log(`->lineID == ${lineID} --> id = ${item[key]}`);
+            console.log(`language == ${language}`);
+            console.log('item == %j', item);
             var newLine = `\"${lineID.trim()}\" = \"${item[language].trim()}\";`;
             newLine = newLine.replace('%1$d', '%d');
             newLine = newLine.replace('%1$s', '%@')
             console.log(`newline===${newLine}===`);
-            fs.readFile(inputFile, 'utf8', function (err,data) {
-              if (err) {
-                return console.log(err);
-              }
-              var result = data.replace(line, newLine);
-
-              fs.writeFile(inputFile, result, 'utf8', function (err) {
-                 if (err) return console.log(err);
-              });
-            });
+            replaceLineInFile(inputFile, newLine, line);
+            // fs.readFile(inputFile, 'utf8', function (err,data) {
+            //   if (err) {
+            //     return console.log(err);
+            //   }
+            //   var result = data.replace(line, newLine);
+            //
+            //   fs.writeFile(inputFile, result, 'utf8', function (err) {
+            //      if (err) return console.log(err);
+            //   });
+            // });
           } else {
             let content = fs.readFileSync(inputFile, 'utf8');
             if (!content.toString().includes(item[key].trim())) {
-              var newLine = `\"${item[key].trim()}\" = \"${item[language].trim()}\";`
-              newLine = newLine.replace('%1$d', '%d');
-              newLine = newLine.replace('%1$s', '%@')
-              if (linesAppands.indexOf(newLine) === -1) {
-                console.log(`notFoundLine===${newLine}===`);
-                linesAppands.push(newLine);
-                fs.appendFile(inputFile, newLine+"\n", function (err) {
-                  if (err) throw err;
-                  console.log('Saved!');
-                });
+              console.log('============>>');
+              console.log(`language == ${language}`);
+              console.log('item == %j', item);
+              if (typeof(item[language]) !== "undefined") {
+                var newLine = `\"${item[key].trim()}\" = \"${item[language].trim()}\";`
+                newLine = newLine.replace('%1$d', '%d');
+                newLine = newLine.replace('%1$s', '%@')
+                if (linesAppands.indexOf(newLine) === -1) {
+                  console.log(`notFoundLine===${newLine}===`);
+                  linesAppands.push(newLine);
+                  fs.appendFile(inputFile, newLine+"\n", function (err) {
+                    if (err) throw err;
+                    console.log('Saved!');
+                  });
+                }
               }
             }
           }
@@ -173,7 +181,7 @@ program
     if (program.hasOwnProperty("baseLanguage")) {
       setValueFromXslx(file, program.xl, program.key, program.language, program.baseLanguage, storyboardTranslateHandler);
     } else {
-      setValueFromXslx(file, program.xl, program.key, program.language, "", translationHandler);
+      setValueFromXslx(file, program.xl, program.key, program.language, translationHandler);
     }
 
   });
