@@ -73,7 +73,7 @@ function storyboardTranslateHandler(inputFile, line, xlTranslateFile, key, baseL
         lineID = lineID.replace("\"", '');
         value = value.replace("\"", '');
         xlData.forEach((item, index, array) => {
-          if (value.trim() === item[baseLanguage].trim()) {
+          if (value.trim().toLowerCase() === item[baseLanguage].trim().toLowerCase()) {
             // console.log(`line===${line}===`);
             var newLine = `\"${lineID.trim()}\" = \"${item[language].trim()}\";`;
             newLine = newLine.replace('%1$d', '%d');
@@ -104,7 +104,7 @@ function translationHandler(inputFile, line, xlTranslateFile, key, language) {
         lineID = lineID.replace("\"", '');
         value = value.replace("\"", '');
         xlData.forEach((item, index, arrar) => {
-          if (lineID.trim() === item[key].trim()) {
+          if (lineID.trim().toLowerCase() === item[key].trim().toLowerCase()) {
             console.log(`line===${line}===`);
             console.log(`->lineID == ${lineID} --> id = ${item[key]}`);
             console.log(`language == ${language}`);
